@@ -1,29 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-	</PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup Label="Package">
-		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>Scrutor HttpClient Extension</Title>
 		<Authors>Chrison Simtian</Authors>
-		<Copyright>$([System.DateTime]::Now.ToString(yyyy)) - $(Company)</Copyright>
+		<Copyright>$(CurrentYear) - $(Company)</Copyright>
 		<Description>Allows you to register HttpClients via Scrutor</Description>
-		<PackageProjectUrl>https://github.com/ChrisonSimtian/Scrutor.Extensions.HttpClient</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/ChrisonSimtian/Scrutor.Extensions.HttpClient.git</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/Chrison-dev/Scrutor.Extensions.HttpClient</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/Chrison-dev/Scrutor.Extensions.HttpClient.git</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 		<IncludeSymbols>False</IncludeSymbols>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-	</PropertyGroup>
-
-	<!-- This defines a default versioning -->
-	<PropertyGroup Label="Versioning">
-		<Version>5.1.2-alpha.3</Version>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	</PropertyGroup>
 
@@ -42,8 +30,13 @@
 		<!-- Limit to 9.x -->
 		<PackageReference Include="Microsoft.Extensions.Http" Version="[9.0.0, 10.0.0)" />
 
-		<!-- Limit to 5.x due to breaking change in 6.x -->
+		<!-- Limit to 5.x due to breaking change in 6.x. Moving to Scrutor 7.x is a
+		     tracked modernization task, not part of this CI/publishing pass. -->
 		<PackageReference Include="Scrutor" Version="[5.1.2, 6.0.0)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Scrutor.Extensions.HttpClient.Specs" />
 	</ItemGroup>
 
 </Project>

@@ -1,0 +1,75 @@
+# Publish on a version tag:
+#   1. NuGet.org via Trusted Publishing (OIDC) — no stored API key.
+#   2. GitHub Packages (uses the built-in GITHUB_TOKEN).
+#   3. A GitHub Release with the .nupkg file attached and auto-generated,
+#      label-categorized release notes (see .github/release.yml).
+#
+# HAND-WRITTEN, documented exception: Fallout owns .github/workflows/build.yml
+# (generated from the [GitHubActions] attribute — never hand-edit it), but the
+# publish flow (OIDC trusted publishing + GitHub Packages + Release) is not
+# expressible via the pinned Fallout 10.3.49 attribute API, so this workflow is
+# maintained by hand. See CLAUDE.md.
+#
+# One-time nuget.org setup: a Trusted Publisher policy for the package
+# (Scrutor.Extensions.HttpClient): owner Chrison-dev, repo
+# Scrutor.Extensions.HttpClient, workflow publish.yml, environment nuget.org.
+# Repo variable NUGET_USER = your nuget.org username.
+#
+# Triggered by pushing a version tag, e.g. `git tag v5.1.0 && git push origin v5.1.0`.
+name: publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # OIDC trusted publishing (nuget.org)
+  contents: write   # create the GitHub Release
+  packages: write   # push to GitHub Packages
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: nuget.org
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                 # GitVersion needs full history
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: 'Restore: dotnet tools'
+        run: dotnet tool restore
+
+      - name: 'Pack'
+        run: dotnet run --project build/_build.csproj -- Pack
+
+      - name: 'NuGet.org: trusted-publishing login (OIDC → short-lived key)'
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: 'NuGet.org: push'
+        run: >
+          dotnet nuget push "artifacts/packages/*.nupkg"
+          --source https://api.nuget.org/v3/index.json
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --skip-duplicate
+
+      - name: 'GitHub Packages: push'
+        run: >
+          dotnet nuget push "artifacts/packages/*.nupkg"
+          --source https://nuget.pkg.github.com/Chrison-dev/index.json
+          --api-key ${{ secrets.GITHUB_TOKEN }}
+          --skip-duplicate
+
+      - name: 'GitHub Release: create with packages + generated notes'
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/packages/*.nupkg
+          generate_release_notes: true

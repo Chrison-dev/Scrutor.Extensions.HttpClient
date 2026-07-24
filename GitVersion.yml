@@ -1,0 +1,36 @@
+mode: ContinuousDelivery
+
+# Versioning scheme: the MAJOR tracks the major version of Scrutor this package is
+# compatible with (v5.x → Scrutor 5.x; when we move to Scrutor 7.x the package
+# becomes 7.x). MINOR.PATCH is our own internal release counter. Releases are cut
+# by tagging `v<Major>.<Minor>.<patch>` (e.g. `git tag v5.1.0`) — GitVersion reads
+# the tag (tag-prefix 'v'). Untagged builds get a prerelease suffix.
+
+branches:
+  main:
+    mode: ContinuousDelivery
+    increment: None
+  develop:
+    mode: ContinuousDeployment
+    label: 'alpha'
+    increment: None
+  release:
+    mode: ContinuousDelivery
+    label: 'beta'
+    increment: None
+  feature:
+    mode: ContinuousDeployment
+    label: 'feature'
+    increment: None
+  hotfix:
+    mode: ContinuousDeployment
+    label: 'hotfix'
+    increment: None
+
+assembly-versioning-scheme: MajorMinorPatch
+assembly-file-versioning-scheme: MajorMinorPatchTag
+
+tag-prefix: 'v'
+
+# Keep major.minor.patch static by not incrementing any version component;
+# the tag drives the release version, prerelease labels provide uniqueness.
