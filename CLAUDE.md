@@ -61,16 +61,24 @@ One-time nuget.org setup: a Trusted Publisher policy for `Scrutor.Extensions.Htt
 (owner `Chrison-dev`, repo `Scrutor.Extensions.HttpClient`, workflow `publish.yml`, environment
 `nuget.org`) + repo variable `NUGET_USER`.
 
-## Versioning — GitVersion, tag-driven
+## Versioning — the version lives in `Directory.Build.props`
 
-`GitVersion.yml` drives the version from `v*` tags. **Convention: MAJOR tracks the compatible
-Scrutor major** — currently **7.x ↔ Scrutor 7.x** (the old 5.x line was Scrutor 5.x; 6.x was
-skipped/never adopted). MINOR.PATCH is our own internal release counter. Cut a release by
-tagging, e.g. `git tag v7.0.0 && git push origin v7.0.0`. Untagged builds fall back to the
-static version in `Directory.Build.props`.
+**The authoritative package version is the static `<Version>` in `Directory.Build.props`.** We do
+**not** reference the `GitVersion.MsBuild` package, so CI packs exactly that value. (`GitVersion.yml`
++ the `GitVersion.Tool` CLI are kept for local inspection only.) This is a deliberate divergence
+from the TVDB sibling: GitVersion in ContinuousDelivery mode won't emit a clean prerelease from a
+tag — a prerelease tag like `v7.0.0-preview.1` becomes `7.0.0-<commitcount>` — and we want clean
+`-preview.N` previews.
 
-> **Note:** GitVersion only honours a version tag on `main` (feature branches get branch-name
-> prerelease labels). Cut releases/prereleases by tagging `main` after the PR merges.
+**Convention: MAJOR tracks the compatible Scrutor major** — currently **7.x ↔ Scrutor 7.x** (the
+old 5.x line was Scrutor 5.x; 6.x was skipped/never adopted). MINOR.PATCH is our internal counter.
+
+**Release process:**
+1. Set `<Version>`/`<InformationalVersion>` in `Directory.Build.props` to the target
+   (e.g. `7.0.0-preview.1` for a preview, `7.0.0` for stable). Keep `AssemblyVersion`/`FileVersion`
+   numeric (`7.0.0.0`). Land it via PR.
+2. Tag `main` to match and push: `git tag v7.0.0-preview.1 && git push origin v7.0.0-preview.1`.
+   The tag fires `publish.yml`; the version comes from the props, the tag names the GitHub Release.
 
 ## Tests — spec-style, no Central Package Management
 

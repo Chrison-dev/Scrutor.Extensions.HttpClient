@@ -14,13 +14,17 @@
   <PropertyGroup Label="GitVersion Integration">
     <!-- Enable GitVersion integration for local builds -->
     <EnableGitVersionTask Condition="'$(GITHUB_ACTIONS)' != 'true'">true</EnableGitVersionTask>
-    <!-- Static fallback version when GitVersion is unavailable. See GitVersion.yml:
-         MAJOR tracks the compatible Scrutor major (7.x ↔ Scrutor 7.x); MINOR.PATCH
-         is our internal counter. -->
-    <Version Condition="'$(GitVersion_FullSemVer)' == ''">7.0.0</Version>
+    <!-- This is the AUTHORITATIVE package version on CI. We do NOT reference the
+         GitVersion.MsBuild package, so $(GitVersion_*) stay empty and these values win
+         (GitVersion.Tool is for local inspection only). Rationale: GitVersion won't emit
+         a clean prerelease from a tag (in ContinuousDelivery mode a prerelease tag becomes
+         `X.Y.Z-<commitcount>`), and we want clean `-preview.N` previews. Release process:
+         set this to the target version, commit, then tag `v<that-version>` to publish.
+         MAJOR tracks the compatible Scrutor major (7.x ↔ Scrutor 7.x); MINOR.PATCH is ours. -->
+    <Version Condition="'$(GitVersion_FullSemVer)' == ''">7.0.0-preview.1</Version>
     <AssemblyVersion Condition="'$(GitVersion_AssemblySemVer)' == ''">7.0.0.0</AssemblyVersion>
     <FileVersion Condition="'$(GitVersion_AssemblySemVer)' == ''">7.0.0.0</FileVersion>
-    <InformationalVersion Condition="'$(GitVersion_InformationalVersion)' == ''">7.0.0</InformationalVersion>
+    <InformationalVersion Condition="'$(GitVersion_InformationalVersion)' == ''">7.0.0-preview.1</InformationalVersion>
     <!-- Use GitVersion values when available -->
     <Version Condition="'$(GitVersion_FullSemVer)' != ''">$(GitVersion_FullSemVer)</Version>
     <AssemblyVersion Condition="'$(GitVersion_AssemblySemVer)' != ''">$(GitVersion_AssemblySemVer)</AssemblyVersion>
