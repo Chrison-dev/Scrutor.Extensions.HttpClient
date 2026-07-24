@@ -1,116 +1,77 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 using Scrutor;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Add DI capabilities for Scrutor to work with HttpClient
+/// Scrutor selector extensions that register each scanned class as a <em>typed</em>
+/// <see cref="System.Net.Http.HttpClient"/> (through <see cref="IHttpClientFactory"/>)
+/// instead of a plain transient/scoped/singleton service.
 /// </summary>
-/// <remarks>https://github.com/khellang/Scrutor/issues/180</remarks>
+/// <remarks>Bridges Scrutor assembly scanning with <c>Microsoft.Extensions.Http</c>.
+/// See https://github.com/khellang/Scrutor/issues/180.</remarks>
 public static class HttpClientExtensions
 {
     /// <summary>
-    /// Add as Named <see cref="HttpClient"/>
+    /// Registers each scanned service as a typed <see cref="System.Net.Http.HttpClient"/> bound to
+    /// the named client <paramref name="name"/> (so they share that client's configuration).
     /// </summary>
-    /// <param name="selector"></param>
-    /// <param name="name"></param>
-    /// <returns></returns>
+    /// <param name="selector">The Scrutor service-type selector.</param>
+    /// <param name="name">The name of a client registered via <c>AddHttpClient(name, ...)</c>.</param>
     public static IServiceTypeSelector AsHttpClient(this IServiceTypeSelector selector, string name = "")
-    {
-        var strategy = new NamedHttpClientRegistrationStrategy(name);
-        return selector.UsingRegistrationStrategy(strategy);
-    }
+        => selector.UsingRegistrationStrategy(new HttpClientRegistrationStrategy(name));
 
     /// <summary>
-    /// Add as <see cref="HttpClient"/>
+    /// Registers each scanned service as a typed <see cref="System.Net.Http.HttpClient"/>, each with
+    /// its own default client named after the service type.
     /// </summary>
-    /// <param name="selector"></param>
-    /// <returns></returns>
+    /// <param name="selector">The Scrutor service-type selector.</param>
     public static IServiceTypeSelector AsHttpClient(this IServiceTypeSelector selector)
-    {
-        return selector.UsingRegistrationStrategy(HttpClientRegistrationStrategy.Instance);
-    }
+        => selector.UsingRegistrationStrategy(new HttpClientRegistrationStrategy(name: null));
 
     /// <summary>
-    /// <see cref="RegistrationStrategy"/> for Named <see cref="HttpClient"/>
+    /// A Scrutor <see cref="RegistrationStrategy"/> that registers each scanned
+    /// (service, implementation) pair as a typed HttpClient. <see cref="System.Net.Http.HttpClient"/>'s
+    /// <c>AddHttpClient&lt;TClient,TImplementation&gt;</c> has no non-generic overload, so the closed
+    /// generic method is resolved once and invoked per scanned type.
     /// </summary>
-    private class NamedHttpClientRegistrationStrategy(string httpClientName) : RegistrationStrategy
+    private sealed class HttpClientRegistrationStrategy(string? name) : RegistrationStrategy
     {
-        public string HttpClientName { get; } = httpClientName;
-        public static RegistrationStrategy Instance { get; private set; }
-        public static RegistrationStrategy GetInstance(string httpClientName)
-        {
-            Instance ??= new NamedHttpClientRegistrationStrategy(httpClientName);
-            return Instance;
-        }
+        // Resolved lazily and cached: the AddHttpClient<,> generic definition matching whether a
+        // client name was supplied. Named → (IServiceCollection, string); unnamed → (IServiceCollection).
+        private static readonly MethodInfo NamedAddHttpClient = ResolveAddHttpClient(named: true);
+        private static readonly MethodInfo UnnamedAddHttpClient = ResolveAddHttpClient(named: false);
 
         public override void Apply(IServiceCollection services, ServiceDescriptor descriptor)
         {
-            Type TInterface = descriptor.ServiceType;
-            Type TClass = descriptor.ImplementationType!;
-            Type TImplementingClass = typeof(HttpClientFactoryServiceCollectionExtensions);
+            var serviceType = descriptor.ServiceType;
+            var implementationType = descriptor.ImplementationType
+                ?? throw new InvalidOperationException(
+                    $"AsHttpClient() requires a concrete implementation type, but the descriptor for " +
+                    $"'{serviceType}' has none. Pair it with a class-based Scrutor selector such as " +
+                    $"AddClasses(...).AsMatchingInterface() / .AsSelf().");
 
+            var closed = (name is null ? UnnamedAddHttpClient : NamedAddHttpClient)
+                .MakeGenericMethod(serviceType, implementationType);
 
-            /* Get all methods named "AddHttpClient" */
-            var methods = TImplementingClass.GetMethods()
-                .Where(m => m.Name == "AddHttpClient" && m.IsGenericMethodDefinition)
-                .ToArray();
-
-            /* Then get the one that matches the amount of generic arguments we want to provide, 
-             * in our case 2: Interface + Implementation AddHttpClient<TInterface,TImplementation>
-             * Can be modified to add more parameters, but minimum is two: AddHttpClient(services, name)
-             */
-            var method = methods.FirstOrDefault(m =>
-            {
-                var parameters = m.GetParameters();
-                var genericArguments = m.GetGenericArguments();
-                return
-                    parameters.Length == 2 && genericArguments.Length == 2 &&
-                    parameters[0].ParameterType == typeof(IServiceCollection) && parameters[1].ParameterType == typeof(string)
-                    ;
-            });
-
-            var genericMethod = method.MakeGenericMethod(TInterface, TClass);
-            genericMethod.Invoke(services, [services, HttpClientName]);
+            var arguments = name is null ? new object[] { services } : new object[] { services, name };
+            closed.Invoke(obj: null, arguments);
         }
-    }
 
-    /// <summary>
-    /// <see cref="RegistrationStrategy"/> for <see cref="HttpClient"/>
-    /// </summary>
-    private class HttpClientRegistrationStrategy : RegistrationStrategy
-    {
-        public static readonly RegistrationStrategy Instance = new HttpClientRegistrationStrategy();
+        private static MethodInfo ResolveAddHttpClient(bool named) =>
+            typeof(HttpClientFactoryServiceCollectionExtensions).GetMethods()
+                .SingleOrDefault(method =>
+                    method is { Name: nameof(HttpClientFactoryServiceCollectionExtensions.AddHttpClient), IsGenericMethodDefinition: true }
+                    && method.GetGenericArguments().Length == 2
+                    && HasShape(method.GetParameters(), named))
+            ?? throw new InvalidOperationException(
+                $"Could not locate the AddHttpClient<TClient,TImplementation>({(named ? "IServiceCollection, string" : "IServiceCollection")}) " +
+                $"overload on {nameof(HttpClientFactoryServiceCollectionExtensions)}. The Microsoft.Extensions.Http API may have changed.");
 
-        public override void Apply(IServiceCollection services, ServiceDescriptor descriptor)
-        {
-            Type TInterface = descriptor.ServiceType;
-            Type TClass = descriptor.ImplementationType!;
-            Type TImplementingClass = typeof(HttpClientFactoryServiceCollectionExtensions);
-
-
-            /* Get all methods named "AddHttpClient" */
-            var methods = TImplementingClass.GetMethods()
-                .Where(m => m.Name == "AddHttpClient" && m.IsGenericMethodDefinition)
-                .ToArray();
-
-            /* Then get the one that matches the amount of generic arguments we want to provide, 
-             * in our case 2: Interface + Implementation AddHttpClient<TInterface,TImplementation>
-             * Can be modified to add more parameters, but minimum is one AddHttpClient(services)
-             */
-            var method = methods.FirstOrDefault(m =>
-            {
-                var parameters = m.GetParameters();
-                var genericArguments = m.GetGenericArguments();
-                return parameters.Length == 1 && genericArguments.Length == 2 && parameters[0].ParameterType == typeof(IServiceCollection);
-            });
-
-            var genericMethod = method.MakeGenericMethod(TInterface, TClass);
-            genericMethod.Invoke(services, [services]);
-        }
+        private static bool HasShape(ParameterInfo[] parameters, bool named) => named
+            ? parameters.Length == 2 && parameters[0].ParameterType == typeof(IServiceCollection) && parameters[1].ParameterType == typeof(string)
+            : parameters.Length == 1 && parameters[0].ParameterType == typeof(IServiceCollection);
     }
 }
