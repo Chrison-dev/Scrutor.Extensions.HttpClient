@@ -21,10 +21,10 @@
          `X.Y.Z-<commitcount>`), and we want clean `-preview.N` previews. Release process:
          set this to the target version, commit, then tag `v<that-version>` to publish.
          MAJOR tracks the compatible Scrutor major (7.x ↔ Scrutor 7.x); MINOR.PATCH is ours. -->
-    <Version Condition="'$(GitVersion_FullSemVer)' == ''">7.0.0</Version>
+    <Version Condition="'$(GitVersion_FullSemVer)' == ''">7.0.1</Version>
     <AssemblyVersion Condition="'$(GitVersion_AssemblySemVer)' == ''">7.0.0.0</AssemblyVersion>
     <FileVersion Condition="'$(GitVersion_AssemblySemVer)' == ''">7.0.0.0</FileVersion>
-    <InformationalVersion Condition="'$(GitVersion_InformationalVersion)' == ''">7.0.0</InformationalVersion>
+    <InformationalVersion Condition="'$(GitVersion_InformationalVersion)' == ''">7.0.1</InformationalVersion>
     <!-- Use GitVersion values when available -->
     <Version Condition="'$(GitVersion_FullSemVer)' != ''">$(GitVersion_FullSemVer)</Version>
     <AssemblyVersion Condition="'$(GitVersion_AssemblySemVer)' != ''">$(GitVersion_AssemblySemVer)</AssemblyVersion>
