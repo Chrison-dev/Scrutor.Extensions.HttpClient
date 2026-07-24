@@ -1,5 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup Label="Target Frameworks">
+		<!-- netstandard2.0 for max reach (net462+, .NET Core 2+, Mono, …); net8.0 for modern
+		     consumers. Overrides the single TFM in the root Directory.Build.props. Both Scrutor 7
+		     and Microsoft.Extensions.Http support these targets. LangVersion lets us use modern
+		     C# (primary constructors, list patterns) even on the netstandard2.0 target. -->
+		<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+		<TargetFramework></TargetFramework>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
 	<PropertyGroup Label="Package">
 		<Title>Scrutor HttpClient Extension</Title>
 		<Authors>Chrison Simtian</Authors>
