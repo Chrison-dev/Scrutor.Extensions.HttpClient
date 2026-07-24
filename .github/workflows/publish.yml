@@ -73,3 +73,6 @@ jobs:
         with:
           files: artifacts/packages/*.nupkg
           generate_release_notes: true
+          # Flag preview/prerelease tags (any tag with a SemVer prerelease suffix,
+          # e.g. v7.0.0-preview.1) as a GitHub pre-release; stable tags (v7.0.0) stay full releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
