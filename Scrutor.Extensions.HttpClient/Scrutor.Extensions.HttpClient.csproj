@@ -10,6 +10,14 @@
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 
+	<!-- Turn on the trim + AOT analyzers on the modern target so our own build validates the
+	     [RequiresUnreferencedCode]/[RequiresDynamicCode] annotations are well-formed and the
+	     intentional reflection is properly justified. (netstandard2.0 has no such analyzers.) -->
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+		<EnableAotAnalyzer>true</EnableAotAnalyzer>
+	</PropertyGroup>
+
 	<PropertyGroup Label="Package">
 		<Title>Scrutor HttpClient Extension</Title>
 		<Authors>Chrison Simtian</Authors>
