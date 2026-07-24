@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Project Properties">
+    <!-- Library targets net8.0 (Scrutor 7.x supports net8.0+). Multi-targeting is a
+         separate modernization concern. The build/ project overrides this to net10.0. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup Label="Variables">
+    <CurrentYear>$([System.DateTime]::Now.ToString("yyyy"))</CurrentYear>
+  </PropertyGroup>
+
+  <PropertyGroup Label="GitVersion Integration">
+    <!-- Enable GitVersion integration for local builds -->
+    <EnableGitVersionTask Condition="'$(GITHUB_ACTIONS)' != 'true'">true</EnableGitVersionTask>
+    <!-- Static fallback version when GitVersion is unavailable. See GitVersion.yml:
+         MAJOR tracks the compatible Scrutor major (7.x ↔ Scrutor 7.x); MINOR.PATCH
+         is our internal counter. -->
+    <Version Condition="'$(GitVersion_FullSemVer)' == ''">7.0.0</Version>
+    <AssemblyVersion Condition="'$(GitVersion_AssemblySemVer)' == ''">7.0.0.0</AssemblyVersion>
+    <FileVersion Condition="'$(GitVersion_AssemblySemVer)' == ''">7.0.0.0</FileVersion>
+    <InformationalVersion Condition="'$(GitVersion_InformationalVersion)' == ''">7.0.0</InformationalVersion>
+    <!-- Use GitVersion values when available -->
+    <Version Condition="'$(GitVersion_FullSemVer)' != ''">$(GitVersion_FullSemVer)</Version>
+    <AssemblyVersion Condition="'$(GitVersion_AssemblySemVer)' != ''">$(GitVersion_AssemblySemVer)</AssemblyVersion>
+    <FileVersion Condition="'$(GitVersion_AssemblySemVer)' != ''">$(GitVersion_AssemblySemVer)</FileVersion>
+    <InformationalVersion Condition="'$(GitVersion_InformationalVersion)' != ''">$(GitVersion_InformationalVersion)</InformationalVersion>
+  </PropertyGroup>
+</Project>

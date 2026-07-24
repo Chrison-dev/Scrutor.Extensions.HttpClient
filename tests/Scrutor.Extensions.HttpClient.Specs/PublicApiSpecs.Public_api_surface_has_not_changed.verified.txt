@@ -1,0 +1,11 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/Chrison-dev/Scrutor.Extensions.HttpClient.git")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Scrutor.Extensions.HttpClient.Specs")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v8.0", FrameworkDisplayName=".NET 8.0")]
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public static class HttpClientExtensions
+    {
+        public static Scrutor.IServiceTypeSelector AsHttpClient(this Scrutor.IServiceTypeSelector selector) { }
+        public static Scrutor.IServiceTypeSelector AsHttpClient(this Scrutor.IServiceTypeSelector selector, string name = "") { }
+    }
+}
