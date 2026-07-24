@@ -5,7 +5,15 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class HttpClientExtensions
     {
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Closes the generic AddHttpClient<TClient,TImplementation> over the scanned types " +
+            "via MakeGenericMethod, which requires runtime code generation.")]
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Registers types discovered by Scrutor\'s runtime assembly scan as typed HttpClient" +
+            "s; the scanned client types may be removed by the trimmer.")]
         public static Scrutor.IServiceTypeSelector AsHttpClient(this Scrutor.IServiceTypeSelector selector) { }
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Closes the generic AddHttpClient<TClient,TImplementation> over the scanned types " +
+            "via MakeGenericMethod, which requires runtime code generation.")]
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Registers types discovered by Scrutor\'s runtime assembly scan as typed HttpClient" +
+            "s; the scanned client types may be removed by the trimmer.")]
         public static Scrutor.IServiceTypeSelector AsHttpClient(this Scrutor.IServiceTypeSelector selector, string name = "") { }
     }
 }

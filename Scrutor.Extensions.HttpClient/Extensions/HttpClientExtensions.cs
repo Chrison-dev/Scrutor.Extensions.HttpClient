@@ -1,6 +1,9 @@
 using System;
 using System.Linq;
 using System.Reflection;
+#if NET8_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 using Scrutor;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -14,12 +17,24 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// See https://github.com/khellang/Scrutor/issues/180.</remarks>
 public static class HttpClientExtensions
 {
+    // Honest trim/AOT signal: registration runs Scrutor's runtime assembly scan and closes the
+    // generic AddHttpClient<TClient,TImplementation> over the scanned types via reflection. Consumers
+    // building trimmed/AOT get a warning at these entry points instead of silent breakage.
+    private const string TrimMessage =
+        "Registers types discovered by Scrutor's runtime assembly scan as typed HttpClients; the scanned client types may be removed by the trimmer.";
+    private const string AotMessage =
+        "Closes the generic AddHttpClient<TClient,TImplementation> over the scanned types via MakeGenericMethod, which requires runtime code generation.";
+
     /// <summary>
     /// Registers each scanned service as a typed <see cref="System.Net.Http.HttpClient"/> bound to
     /// the named client <paramref name="name"/> (so they share that client's configuration).
     /// </summary>
     /// <param name="selector">The Scrutor service-type selector.</param>
     /// <param name="name">The name of a client registered via <c>AddHttpClient(name, ...)</c>.</param>
+#if NET8_0_OR_GREATER
+    [RequiresUnreferencedCode(TrimMessage)]
+    [RequiresDynamicCode(AotMessage)]
+#endif
     public static IServiceTypeSelector AsHttpClient(this IServiceTypeSelector selector, string name = "")
         => selector.UsingRegistrationStrategy(new HttpClientRegistrationStrategy(name));
 
@@ -28,6 +43,10 @@ public static class HttpClientExtensions
     /// its own default client named after the service type.
     /// </summary>
     /// <param name="selector">The Scrutor service-type selector.</param>
+#if NET8_0_OR_GREATER
+    [RequiresUnreferencedCode(TrimMessage)]
+    [RequiresDynamicCode(AotMessage)]
+#endif
     public static IServiceTypeSelector AsHttpClient(this IServiceTypeSelector selector)
         => selector.UsingRegistrationStrategy(new HttpClientRegistrationStrategy(name: null));
 
@@ -44,6 +63,13 @@ public static class HttpClientExtensions
         private static readonly MethodInfo NamedAddHttpClient = ResolveAddHttpClient(named: true);
         private static readonly MethodInfo UnnamedAddHttpClient = ResolveAddHttpClient(named: false);
 
+        // Apply overrides Scrutor's (un-annotated) RegistrationStrategy.Apply, so the RequiresDynamicCode
+        // warning can't propagate here. It's already surfaced to consumers on the public AsHttpClient
+        // entry points (the only way to reach this strategy), so suppress the internal MakeGenericMethod site.
+#if NET8_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL3050",
+            Justification = "AsHttpClient() entry points are marked [RequiresDynamicCode]; callers are warned. AddHttpClient<,> has no non-generic overload.")]
+#endif
         public override void Apply(IServiceCollection services, ServiceDescriptor descriptor)
         {
             var serviceType = descriptor.ServiceType;
