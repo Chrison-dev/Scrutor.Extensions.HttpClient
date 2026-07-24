@@ -1,24 +1,98 @@
 # Scrutor.Extensions.HttpClient
-A solution for https://github.com/khellang/Scrutor/issues/180 baked into a Nuget Package
+
+[![NuGet](https://img.shields.io/nuget/v/Scrutor.Extensions.HttpClient.svg)](https://www.nuget.org/packages/Scrutor.Extensions.HttpClient/)
+[![Downloads](https://img.shields.io/nuget/dt/Scrutor.Extensions.HttpClient.svg)](https://www.nuget.org/packages/Scrutor.Extensions.HttpClient/)
+[![Build & Test](https://github.com/Chrison-dev/Scrutor.Extensions.HttpClient/actions/workflows/build.yml/badge.svg)](https://github.com/Chrison-dev/Scrutor.Extensions.HttpClient/actions/workflows/build.yml)
+[![Built with Fallout](https://img.shields.io/badge/built%20with-Fallout-8A2BE2)](https://github.com/Fallout-build/Fallout)
+[![License](https://img.shields.io/github/license/Chrison-dev/Scrutor.Extensions.HttpClient.svg)](LICENSE)
+
+A tiny companion for [Scrutor](https://github.com/khellang/Scrutor) that lets its
+assembly-scanning register each matched class as a **typed
+[`HttpClient`](https://learn.microsoft.com/dotnet/core/extensions/httpclient-factory#typed-clients)**
+(via `IHttpClientFactory`) instead of a plain service — the one thing Scrutor
+[deliberately doesn't do out of the box](https://github.com/khellang/Scrutor/issues/180).
+
+```csharp
+services.Scan(scan => scan
+    .FromAssemblyOf<IWeatherClient>()
+    .AddClasses(c => c.AssignableTo<IApiClient>())
+    .AsMatchingInterface()
+    .AsHttpClient("weather"));   // ← every scanned client becomes a typed HttpClient
+```
+
+## Install
+
+```sh
+dotnet add package Scrutor.Extensions.HttpClient
+```
 
 ## Usage
 
-1. Inject your Http Client as a named Client
-2. Make sure that all your Api Clients are assignable to a common interface
-3. Register all your Api Clients with Scrutor.Extensions.HttpClient
+1. Register a **named** `HttpClient` with your shared configuration.
+2. Make your API clients implement a common marker interface (and, for
+   `.AsMatchingInterface()`, an `I{ClassName}` interface each).
+3. Scan for them and finish the chain with `.AsHttpClient("<name>")`.
 
 ```csharp
-/* Inject named HttpClient */
-services.AddHttpClient("MyHttpClient", client =>
+// 1. A named client carrying the shared config (base address, handlers, Polly, …).
+services.AddHttpClient("weather", client =>
 {
-	client.BaseAddress = new Uri("https://api.example.com");
+    client.BaseAddress = new Uri("https://api.example.com");
 });
 
-/* Inject all implementations of IMyHttpApiClient */
+// 2 + 3. Register every IApiClient implementation as a typed client of "weather".
 services.Scan(scan => scan
-        .FromCallingAssembly()
-        .AddClasses(classes => classes.AssignableTo<IMyHttpApiClient>())
-        .AsMatchingInterface()
-        .AsHttpClient("MyHttpClient")
-        );
+    .FromAssemblyOf<IWeatherClient>()
+    .AddClasses(classes => classes.AssignableTo<IApiClient>())
+    .AsMatchingInterface()
+    .AsHttpClient("weather"));
 ```
+
+Now each scanned client is resolved from `IHttpClientFactory` with the `"weather"`
+client's configuration injected:
+
+```csharp
+public sealed class WeatherClient(HttpClient http) : IWeatherClient
+{
+    public Task<Forecast?> GetAsync(string city) =>
+        http.GetFromJsonAsync<Forecast>($"forecast/{city}");
+}
+```
+
+### Overloads
+
+| Call | Behaviour |
+|---|---|
+| `.AsHttpClient("name")` | Registers each scanned class as a typed client bound to the **named** client `"name"` — they share its configuration. |
+| `.AsHttpClient()` | Registers each scanned class as a typed client with **its own** default client (named after the service type). |
+
+Both are `IServiceTypeSelector` extensions, so they slot onto the end of any Scrutor
+`.Scan(...)` chain (`.AsMatchingInterface()`, `.AsSelf()`, `.As<T>()`, …).
+
+## Compatibility
+
+- **Scrutor 7.x** — the package major tracks Scrutor's major (`7.x` ↔ Scrutor 7.x).
+- Targets **`net8.0`** and **`netstandard2.0`** (so it's usable from .NET Framework 4.6.2+,
+  .NET Core 2.0+, and modern .NET alike).
+
+### Trimming / AOT
+
+This bridges Scrutor's **runtime** assembly scan and closes the generic
+`AddHttpClient<TClient,TImplementation>` over the scanned types via reflection, so it
+is **not** trim- or Native-AOT-safe. The public methods are annotated with
+`[RequiresUnreferencedCode]` / `[RequiresDynamicCode]`, so a trimmed/AOT build gets an
+honest warning at the call site rather than silent breakage.
+
+## Building
+
+CI is defined in C# with [Fallout](https://github.com/Fallout-build/Fallout) (a NUKE
+fork); the GitHub Actions workflow is generated from the build, never hand-edited.
+
+```sh
+./build.cmd Test    # run the spec suite
+./build.cmd Pack    # test + pack the NuGet package
+```
+
+## License
+
+[MIT](LICENSE)
