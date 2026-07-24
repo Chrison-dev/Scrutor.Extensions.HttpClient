@@ -27,12 +27,10 @@
 	</ItemGroup>
 
 	<ItemGroup Label="Nuget Packages">
-		<!-- Limit to 9.x -->
-		<PackageReference Include="Microsoft.Extensions.Http" Version="[9.0.0, 10.0.0)" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="[9.0.0, 11.0.0)" />
 
-		<!-- Limit to 5.x due to breaking change in 6.x. Moving to Scrutor 7.x is a
-		     tracked modernization task, not part of this CI/publishing pass. -->
-		<PackageReference Include="Scrutor" Version="[5.1.2, 6.0.0)" />
+		<!-- Aligned with Scrutor's major: package 7.x ↔ Scrutor 7.x. -->
+		<PackageReference Include="Scrutor" Version="[7.0.0, 8.0.0)" />
 	</ItemGroup>
 
 	<ItemGroup>

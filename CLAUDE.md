@@ -64,9 +64,13 @@ One-time nuget.org setup: a Trusted Publisher policy for `Scrutor.Extensions.Htt
 ## Versioning — GitVersion, tag-driven
 
 `GitVersion.yml` drives the version from `v*` tags. **Convention: MAJOR tracks the compatible
-Scrutor major** (v5.x → Scrutor 5.x; a move to Scrutor 7.x makes this package 7.x). MINOR.PATCH
-is our own internal release counter. Cut a release by tagging, e.g. `git tag v5.1.0 && git push
-origin v5.1.0`. Untagged builds fall back to the static version in `Directory.Build.props`.
+Scrutor major** — currently **7.x ↔ Scrutor 7.x** (the old 5.x line was Scrutor 5.x; 6.x was
+skipped/never adopted). MINOR.PATCH is our own internal release counter. Cut a release by
+tagging, e.g. `git tag v7.0.0 && git push origin v7.0.0`. Untagged builds fall back to the
+static version in `Directory.Build.props`.
+
+> **Note:** GitVersion only honours a version tag on `main` (feature branches get branch-name
+> prerelease labels). Cut releases/prereleases by tagging `main` after the PR merges.
 
 ## Tests — spec-style, no Central Package Management
 
@@ -84,8 +88,12 @@ Tests live in `tests/*.Specs` and follow the Fallout/TVDB convention:
 
 ## Library conventions
 
-- Targets **net8.0** (Scrutor 5.x era). TFM/Scrutor-major bumps are **modernization**, tracked
-  separately — not folded into routine changes.
-- Scrutor pinned `[5.1.2, 6.0.0)` and `Microsoft.Extensions.Http` `[9.0.0, 10.0.0)` on purpose
-  (6.x Scrutor has a breaking change). Root `Directory.Build.props` centralizes TFM + GitVersion;
-  the library csproj only carries package metadata.
+- Targets **net8.0** (Scrutor 7.x supports net8.0+). Multi-targeting is a separate modernization
+  concern, tracked apart from routine changes.
+- Scrutor pinned `[7.0.0, 8.0.0)` (aligned with the package major) and `Microsoft.Extensions.Http`
+  `[9.0.0, 11.0.0)`. The 5→7 bump was clean — the `.AsHttpClient()` bridge sits on Scrutor's
+  stable `RegistrationStrategy` seam, so no code/test changes were needed. Root
+  `Directory.Build.props` centralizes TFM + GitVersion; the library csproj only carries metadata.
+- Still-open modernization (deliberately deferred, discuss before doing): multi-target TFMs, and a
+  source-generator rewrite to replace the `MakeGenericMethod` reflection (the one axis that isn't
+  trim/Native-AOT friendly).
